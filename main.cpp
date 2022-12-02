@@ -1,12 +1,11 @@
 //
+// Prerequisites:
 // sudo apt install opencl-headers
 // sudo apt install ocl-icd-opencl-dev
+//
+// Compile with:
 // c++ main.cpp -o vectorMatchCount -l OpenCL 
 // (or g++)
-//
-
-//
-// Refer also to: https://www.eriksmistad.no/getting-started-with-opencl-and-gpu-computing/
 //
 
 #include <stdio.h>
