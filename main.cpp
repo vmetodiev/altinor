@@ -1,7 +1,7 @@
 //
 // sudo apt install opencl-headers
 // sudo apt install ocl-icd-opencl-dev
-// c++ main.cpp -o vectorAddition -l OpenCL 
+// c++ main.cpp -o vectorMatchCount -l OpenCL 
 // (or g++)
 //
 
@@ -51,7 +51,7 @@ int main(int argc, char ** argv) {
 
 	if (!kernelFile) {
 
-		fprintf(stderr, "No file named vecMatchKernel was found\n");
+		fprintf(stderr, "No file named vecMatchKernel.cl was found\n");
 		exit(-1);
 	}
 
