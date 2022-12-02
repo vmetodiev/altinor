@@ -26,13 +26,13 @@ int main(int argc, char ** argv) {
 	int i = 0;
 
 	ELEMENT_TYPE string[LEN] =
-        { 'h', 'e', 'l', 'l', 'o', 'a', '5', 'b', 'j', '8' };
+        { 'h', 'e', 'l', 'l', 'o', 'a', '5', 'b', 'j', '8' }; // This my string template
    
     ELEMENT_TYPE matrix[PATTERN_LEN][LEN] =
     {
-        { 'X', 'X', 'X', 'a', '5', 'b', 'X', 'X', 'X', 'X' },
-        { 'X', 'X', 'X', 'X', 'a', 'a', '5', 'X', 'X', 'X' },
-        { 'X', 'X', 'X', 'X', 'X', 'a', '5', 'b', 'X', 'X' }
+        { 'X', 'X', 'X', 'a', '5', 'b', 'X', 'X', 'X', 'X' }, // #1 will not match
+        { 'X', 'X', 'X', 'X', 'a', 'a', '5', 'X', 'X', 'X' }, // #2 will not match
+        { 'X', 'X', 'X', 'X', 'X', 'a', '5', 'b', 'X', 'X' }  // #3 will MATCH
     };
 
 	ELEMENT_TYPE* a = string;
