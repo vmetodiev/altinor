@@ -25,32 +25,33 @@ int main(int argc, char ** argv) {
 	int SIZE = LEN;
 	int i = 0;
 
-	uint8_t string[LEN] =
+	ELEMENT_TYPE string[LEN] =
         { 'h', 'e', 'l', 'l', 'o', 'a', '5', 'b', 'j', '8' };
    
-    uint8_t matrix[PATTERN_LEN][LEN] =
+    ELEMENT_TYPE matrix[PATTERN_LEN][LEN] =
     {
         { 'X', 'X', 'X', 'a', '5', 'b', 'X', 'X', 'X', 'X' },
         { 'X', 'X', 'X', 'X', 'a', 'a', '5', 'X', 'X', 'X' },
         { 'X', 'X', 'X', 'X', 'X', 'a', '5', 'b', 'X', 'X' }
     };
 
-	uint8_t* a = string;
-	uint8_t* b = nullptr;
+	ELEMENT_TYPE* a = string;
+	ELEMENT_TYPE* b = nullptr;
 	
 	// Output
-	ELEMENT_TYPE *c = (ELEMENT_TYPE*)malloc(sizeof(ELEMENT_TYPE) * SIZE);
+	//ELEMENT_TYPE *c = (ELEMENT_TYPE*)malloc(sizeof(ELEMENT_TYPE) * SIZE);
+	volatile int c = 0;
 
-	// Load kernel from file vecAddKernel.cl
+	// Load kernel from file vecMatchKernel
 	FILE *kernelFile;
 	char *kernelSource;
 	size_t kernelSize;
 
-	kernelFile = fopen("vecAddKernel.cl", "r");
+	kernelFile = fopen("vecMatchKernel.cl", "r");
 
 	if (!kernelFile) {
 
-		fprintf(stderr, "No file named vecAddKernel.cl was found\n");
+		fprintf(stderr, "No file named vecMatchKernel was found\n");
 		exit(-1);
 	}
 
@@ -81,7 +82,7 @@ int main(int argc, char ** argv) {
 	// Memory buffers for each array
 	cl_mem aMemObj = clCreateBuffer(context, CL_MEM_READ_ONLY, SIZE * sizeof(ELEMENT_TYPE), NULL, &ret);
 	cl_mem bMemObj = clCreateBuffer(context, CL_MEM_READ_ONLY, SIZE * sizeof(ELEMENT_TYPE), NULL, &ret);
-	cl_mem cMemObj = clCreateBuffer(context, CL_MEM_WRITE_ONLY, SIZE * sizeof(ELEMENT_TYPE), NULL, &ret);
+	cl_mem cMemObj = clCreateBuffer(context, CL_MEM_WRITE_ONLY,       sizeof(int), NULL, &ret);
 
 	// Create program from kernel source
 	cl_program program = clCreateProgramWithSource(context, 1, (const char **)&kernelSource, (const size_t *)&kernelSize, &ret);
@@ -90,7 +91,7 @@ int main(int argc, char ** argv) {
 	ret = clBuildProgram(program, 1, &deviceID, NULL, NULL, NULL);
 
 	// Create kernel
-	cl_kernel kernel = clCreateKernel(program, "addVectors", &ret);
+	cl_kernel kernel = clCreateKernel(program, "matchVectors", &ret);
 
 	// Set arguments for kernel
 	ret = clSetKernelArg(kernel, 0, sizeof(cl_mem), (void *)&aMemObj);
@@ -98,13 +99,14 @@ int main(int argc, char ** argv) {
 	ret = clSetKernelArg(kernel, 2, sizeof(cl_mem), (void *)&cMemObj);
 
 	// Execute the kernel
-	size_t globalItemSize = SIZE;
+	size_t globalItemSize = 1024;
 	size_t localItemSize = 64; // globalItemSize has to be a multiple of localItemSize. 1024/64 = 16 
 	cl_uint clDimensions = 1;
 
 	for ( int row = 0; row < TEMP_ROWS; row++ )
     {  
-        uint8_t* b = matrix[row];
+		uint8_t* b = matrix[row];
+		c = 0;
 
 		// Copy lists to memory buffers
 		ret = clEnqueueWriteBuffer(commandQueue, aMemObj, CL_TRUE, 0, SIZE * sizeof(ELEMENT_TYPE), a, 0, NULL, NULL);
@@ -114,15 +116,10 @@ int main(int argc, char ** argv) {
 		ret = clEnqueueNDRangeKernel(commandQueue, kernel, clDimensions, NULL, &globalItemSize, &localItemSize, 0, NULL, NULL);
 		
 		// Get the result
-		ret = clEnqueueReadBuffer(commandQueue, cMemObj, CL_TRUE, 0, SIZE * sizeof(ELEMENT_TYPE), c, 0, NULL, NULL);
+		ret = clEnqueueReadBuffer(commandQueue, cMemObj, CL_TRUE, 0, sizeof(c), (void *)&c, 0, NULL, NULL);
 
-		printf("\n Line %d: ", row);
 		// Write result
-		for ( i = 0; i < SIZE; ++i )
-		{
-			printf("%u ", c[i]);
-		}
-		printf("\n");
+		printf("Result: c = %d\n", c);
     }
 
 	// Clean up, release memory.
@@ -136,7 +133,5 @@ int main(int argc, char ** argv) {
 	ret = clReleaseMemObject(cMemObj);
 	ret = clReleaseContext(context);
 	
-	free(c);
-
 	return 0;
 }
