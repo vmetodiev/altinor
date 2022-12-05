@@ -81,7 +81,9 @@ int main(int argc, char ** argv) {
 	// Memory buffers for each array
 	cl_mem aMemObj = clCreateBuffer(context, CL_MEM_READ_ONLY, SIZE * sizeof(ELEMENT_TYPE), NULL, &ret);
 	cl_mem bMemObj = clCreateBuffer(context, CL_MEM_READ_ONLY, SIZE * sizeof(ELEMENT_TYPE), NULL, &ret);
-	cl_mem cMemObj = clCreateBuffer(context, CL_MEM_WRITE_ONLY,       sizeof(int), NULL, &ret);
+	//cl_mem cMemObj = clCreateBuffer(context, CL_MEM_WRITE_ONLY, sizeof(int), NULL, &ret);x
+	//MODIFIED: though CL_MEM_WRITE_ONLY may work, however it is better to use CL_MEM_READ_WRITE flag as atomic_inc is a read-write operation
+	cl_mem cMemObj = clCreateBuffer(context, CL_MEM_READ_WRITE,       sizeof(int), NULL, &ret); 
 
 	// Create program from kernel source
 	cl_program program = clCreateProgramWithSource(context, 1, (const char **)&kernelSource, (const size_t *)&kernelSize, &ret);
@@ -98,9 +100,13 @@ int main(int argc, char ** argv) {
 	ret = clSetKernelArg(kernel, 2, sizeof(cl_mem), (void *)&cMemObj);
 
 	// Execute the kernel
-	size_t globalItemSize = 1024;
+	//size_t globalItemSize = 1024;
+
+	size_t globalItemSize = SIZE; // MODIFIED
+
 	size_t localItemSize = 64; // globalItemSize has to be a multiple of localItemSize. 1024/64 = 16 
 	cl_uint clDimensions = 1;
+
 
 	for ( int row = 0; row < TEMP_ROWS; row++ )
     {  
@@ -110,9 +116,15 @@ int main(int argc, char ** argv) {
 		// Copy lists to memory buffers
 		ret = clEnqueueWriteBuffer(commandQueue, aMemObj, CL_TRUE, 0, SIZE * sizeof(ELEMENT_TYPE), a, 0, NULL, NULL);
 		ret = clEnqueueWriteBuffer(commandQueue, bMemObj, CL_TRUE, 0, SIZE * sizeof(ELEMENT_TYPE), b, 0, NULL, NULL);
+
+		// MODIFIED: set the counter to zero
+		ret = clEnqueueWriteBuffer(commandQueue, cMemObj, CL_TRUE, 0, sizeof(int), (const void*)(&c), 0, NULL, NULL);   
 		
 		// Execute kernel
-		ret = clEnqueueNDRangeKernel(commandQueue, kernel, clDimensions, NULL, &globalItemSize, &localItemSize, 0, NULL, NULL);
+		//ret = clEnqueueNDRangeKernel(commandQueue, kernel, clDimensions, NULL, &globalItemSize, &localItemSize, 0, NULL, NULL);
+		
+		// MODIFIED: 
+		ret = clEnqueueNDRangeKernel(commandQueue, kernel, clDimensions, NULL, &globalItemSize, NULL, 0, NULL, NULL);
 		
 		// Get the result
 		ret = clEnqueueReadBuffer(commandQueue, cMemObj, CL_TRUE, 0, sizeof(c), (void *)&c, 0, NULL, NULL);
