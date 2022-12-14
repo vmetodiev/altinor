@@ -16,9 +16,9 @@ int main(void)
     //
     int PATTERN_LEN = 3; // Imagine we have parsed a line that is 3-bytes in length
     uint8_t* pattern = (uint8_t *)malloc( sizeof(uint8_t) * PATTERN_LEN );
-    pattern[0] = 'a';
-    pattern[1] = '5';
-    pattern[2] = 'b';
+    pattern[0] = 'x';
+    pattern[1] = 'y';
+    pattern[2] = 'z';
 
     int i = 0;
     uint8_t* pattern_buffer = (uint8_t *)malloc( sizeof(uint8_t) * BUFF_LEN );
