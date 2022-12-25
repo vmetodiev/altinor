@@ -1,6 +1,13 @@
 #ifndef DYNMATRIX_H
 #define DYNMATRIX
 
+#pragma once
+
+#include <stdint.h>
+#include <stdlib.h>
+
+#define LOG_ENABLED ( 0 )
+
 uint8_t** generate_pattern_match_matrix(uint8_t* pattern,          // Pattern buffer
                                         uint16_t pattern_len,      // Pattern buffer length
                                         uint16_t payload_len,      // Packet payload buffer - use the network interface MTU (for UDP) or MSS (for TCP) values

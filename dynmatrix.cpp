@@ -1,7 +1,4 @@
 #include <stdio.h>
-#include <stdlib.h>
-#include <math.h>
-#include <stdint.h>
 #include "dynmatrix.h"
 
 uint8_t** generate_pattern_match_matrix(uint8_t* pattern,
@@ -23,7 +20,8 @@ uint8_t** generate_pattern_match_matrix(uint8_t* pattern,
         *(normalized_pattern_buffer + i) = pattern[i];
 
 
-    printf("Inside function: single line from the configuration file: ");
+    #if ( LOG_ENABLED )
+    printf("Single line from the configuration file: ");
     for ( i = 0; i < pattern_len; i++ )
     {    
         *(normalized_pattern_buffer + i) = pattern[i];
@@ -32,10 +30,11 @@ uint8_t** generate_pattern_match_matrix(uint8_t* pattern,
     printf("\n");
 
 
-    printf("Inside function: line transformed to packet buffer: ");
+    printf("Line transformed to packet buffer: ");
     for ( i = 0; i < payload_len; i++ )
         printf( "%c", *(normalized_pattern_buffer + i) );
     printf("\n");
+    #endif
 
     //
     // Populate the matrix
@@ -80,34 +79,7 @@ void print_pattern_match_matrix(uint8_t** matrix,
         }
         printf("\n");
     }
-
-    return;
-}
-
-int main(void) 
-{
-    //
-    // This is the packet buffer
-    //
-    uint16_t BUFF_LEN = 10; // The size should be a configuration option (related to the MTU, MSS, etc)
-    // uint8_t packet[BUFF_LEN] = { 'h', 'e', 'l', 'l', 'o', 'a', '5', 'b', 'j', '8' }; // This is the network packet - the only static array in the example
-
-    //
-    // This a parsed line from the configuration file with the signatures
-    //
-    uint16_t PATTERN_LEN = 3; // Imagine we have parsed a line that is 3-bytes in length
-    uint8_t* pattern = (uint8_t *)malloc( sizeof(uint8_t) * PATTERN_LEN );
-    pattern[0] = 'x';
-    pattern[1] = 'y';
-    pattern[2] = 'z';
-
-    uint16_t rows = 0, columns = 0;
-    uint8_t** matrix = generate_pattern_match_matrix(pattern, PATTERN_LEN, BUFF_LEN, &rows, &columns);
-    print_pattern_match_matrix(matrix, rows, columns);
-
-    free( matrix );
-
     printf("===========================\n");
-
-    return 0;
+    
+    return;
 }
