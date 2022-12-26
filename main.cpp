@@ -13,6 +13,8 @@
 #include <math.h>
 #include <CL/cl.h>
 
+#define USE_OPEN_CL ( 0 )
+
 #define MAX_SOURCE_SIZE (0x100000)
 #define ELEMENT_TYPE uint8_t
 #define LEN 4100000
@@ -36,7 +38,6 @@ int main(int argc, char ** argv) {
 
 
 	ELEMENT_TYPE* a = string;
-	ELEMENT_TYPE* b = nullptr;
 	volatile uint32_t c = 0;
 
 	// Load kernel from file vecMatchKernel
@@ -100,31 +101,50 @@ int main(int argc, char ** argv) {
 	size_t localItemSize = SIZE;
 	cl_uint clDimensions = 1;
 
+	ELEMENT_TYPE* b = matrix[0];
+	c = 0;
 
-	for ( int row = 0; row < 1; row++ )
-    {  
-		uint8_t* b = matrix[row];
-		c = 0;
+	if ( USE_OPEN_CL )
+	{
+		printf("Using OpenCL...\n");
 
-		// Copy lists to memory buffers
-		ret = clEnqueueWriteBuffer(commandQueue, aMemObj, CL_TRUE, 0, SIZE * sizeof(ELEMENT_TYPE), a, 0, NULL, NULL);
-		ret = clEnqueueWriteBuffer(commandQueue, bMemObj, CL_TRUE, 0, SIZE * sizeof(ELEMENT_TYPE), b, 0, NULL, NULL);
-		ret = clEnqueueWriteBuffer(commandQueue, cMemObj, CL_TRUE, 0, sizeof(uint32_t), (const void*)(&c), 0, NULL, NULL);
-		
-		// Execute kernel
-		ret = clEnqueueNDRangeKernel(commandQueue, kernel, clDimensions, NULL, &globalItemSize, NULL, 0, NULL, NULL);
-		
-		// Get the result
-		ret = clEnqueueReadBuffer(commandQueue, cMemObj, CL_TRUE, 0, sizeof(c), (void *)&c, 0, NULL, NULL);
+		for ( int row = 0; row < 1; row++ )
+		{  
+
+			// Copy lists to memory buffers
+			ret = clEnqueueWriteBuffer(commandQueue, aMemObj, CL_TRUE, 0, SIZE * sizeof(ELEMENT_TYPE), a, 0, NULL, NULL);
+			ret = clEnqueueWriteBuffer(commandQueue, bMemObj, CL_TRUE, 0, SIZE * sizeof(ELEMENT_TYPE), b, 0, NULL, NULL);
+			ret = clEnqueueWriteBuffer(commandQueue, cMemObj, CL_TRUE, 0, sizeof(uint32_t), (const void*)(&c), 0, NULL, NULL);
+			
+			// Execute kernel
+			ret = clEnqueueNDRangeKernel(commandQueue, kernel, clDimensions, NULL, &globalItemSize, NULL, 0, NULL, NULL);
+			
+			// Get the result
+			ret = clEnqueueReadBuffer(commandQueue, cMemObj, CL_TRUE, 0, sizeof(c), (void *)&c, 0, NULL, NULL);
+
+			// Write result
+			printf("Result: c = %u\n", c);
+			if ( c == LEN )
+			{
+				printf("MATCH! \n");
+				break;
+			}
+		}
+	} 
+	else
+	{
+		printf("Not using OpenCL...\n");
+
+		for ( uint64_t i = 0; i < LEN; i++ )
+			if ( b[i] == a[i] ) c++;
 
 		// Write result
 		printf("Result: c = %u\n", c);
 		if ( c == LEN )
 		{
 			printf("MATCH! \n");
-			break;
 		}
-    }
+	}
 
 	ret = clFlush(commandQueue);
 	ret = clFinish(commandQueue);
