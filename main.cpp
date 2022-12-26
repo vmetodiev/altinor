@@ -4,7 +4,7 @@
 // sudo apt install ocl-icd-opencl-dev
 //
 // Compile with:
-// c++ main.cpp -o vectorMatchCount -l OpenCL 
+// c++ main.cpp -o main -l OpenCL 
 // (or g++)
 //
 
@@ -15,23 +15,25 @@
 
 #define MAX_SOURCE_SIZE (0x100000)
 #define ELEMENT_TYPE uint8_t
-#define LEN 10
-#define PATTERN_LEN 3
+#define LEN 4100000
+#define PATTERN_LEN 1
 #define TEMP_ROWS 3
 
 int main(int argc, char ** argv) {
 	
 	int SIZE = LEN;
+	uint64_t i = 0;
 
-	ELEMENT_TYPE string[LEN] =
-        { 'h', 'e', 'l', 'l', 'o', 'a', '5', 'b', 'j', '8' }; // This my string template
-   
-    ELEMENT_TYPE matrix[PATTERN_LEN][LEN] =
-    {
-        { 'X', 'X', 'X', 'a', '5', 'b', 'X', 'X', 'X', 'X' }, // #1 will not match
-        { 'X', 'X', 'X', 'X', 'a', 'a', '5', 'X', 'X', 'X' }, // #2 will not match
-        { 'X', 'X', 'X', 'X', 'X', 'a', '5', 'b', 'X', 'X' }  // #3 will MATCH
-    };
+	uint8_t pattern[8] = { 'a', 'l', 't', 'i', 'n', 'o', 'r' };
+
+	ELEMENT_TYPE string[LEN];
+	for ( i = 0; i < LEN; i++ )
+        string[i] = 'a';
+	
+	ELEMENT_TYPE matrix[PATTERN_LEN][LEN];
+	for ( i = 0; i < LEN; i++ )
+		matrix[0][i] = 'a';
+
 
 	ELEMENT_TYPE* a = string;
 	ELEMENT_TYPE* b = nullptr;
@@ -70,7 +72,6 @@ int main(int argc, char ** argv) {
 	// Creating context.
 	cl_context context = clCreateContext(NULL, 1, &deviceID, NULL, NULL, &ret);
 
-
 	// Creating command queue
 	cl_command_queue commandQueue = clCreateCommandQueueWithProperties(context, deviceID, 0, &ret);
 
@@ -100,7 +101,7 @@ int main(int argc, char ** argv) {
 	cl_uint clDimensions = 1;
 
 
-	for ( int row = 0; row < TEMP_ROWS; row++ )
+	for ( int row = 0; row < 1; row++ )
     {  
 		uint8_t* b = matrix[row];
 		c = 0;
@@ -111,13 +112,18 @@ int main(int argc, char ** argv) {
 		ret = clEnqueueWriteBuffer(commandQueue, cMemObj, CL_TRUE, 0, sizeof(uint32_t), (const void*)(&c), 0, NULL, NULL);
 		
 		// Execute kernel
-				ret = clEnqueueNDRangeKernel(commandQueue, kernel, clDimensions, NULL, &globalItemSize, NULL, 0, NULL, NULL);
+		ret = clEnqueueNDRangeKernel(commandQueue, kernel, clDimensions, NULL, &globalItemSize, NULL, 0, NULL, NULL);
 		
 		// Get the result
 		ret = clEnqueueReadBuffer(commandQueue, cMemObj, CL_TRUE, 0, sizeof(c), (void *)&c, 0, NULL, NULL);
 
 		// Write result
 		printf("Result: c = %u\n", c);
+		if ( c == LEN )
+		{
+			printf("MATCH! \n");
+			break;
+		}
     }
 
 	ret = clFlush(commandQueue);
