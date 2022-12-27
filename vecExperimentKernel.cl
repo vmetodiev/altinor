@@ -1,32 +1,52 @@
-#define MATCH_FOUND 255
 #define BLACK_SPACE 'X'
+
+#define CL_LOG ( 0 )
+#define CL_LOG_VERBOSE ( 0 )
+
 
 __kernel void matchVectors(
 	__global const uchar *a, 
 	__global const uchar *b,
 	volatile __global uint *c,
-	__global uint *size,
+	__global uint *signature_length,
 	__global uint *parts,
-	__global uint *signature_length)
+	__global uint *payload_length)
 {		
-	int batch = *size;
-	
-	int n = get_local_id(0); // or get_global_id
+	uint n = get_global_id(0); // or get_global_id
+	*c = 0;
+
+	#if ( CL_LOG_VERBOSE != 0 )
+	printf( "CL, signature_length: %u\n", *signature_length);
+	printf( "CL, parts: %u\n", *parts);
+	printf( "CL, payload_length: %u\n", *payload_length);
+	printf( "CL, get_global_id: %u\n", n);
+	#endif
 
 	for ( int i = 0; i < *parts; i++ )
 	{
-		int m = ( batch * i ) + n;
-		
-		if ( ( a[n] ^ b[m] ) == 0 ) 
-			if ( a[n] != BLACK_SPACE )
+		uint p = n;
+		uint q = ( (*payload_length) * i ) + n;
+
+		#if ( CL_LOG != 0 )
+		printf( "a[%u]=%c, b[%u]=%c", p, a[p], q, b[q] );
+		#endif
+
+		if ( p == 0 )
+			*c = 0;
+
+		if ( ( a[p] ^ b[q] ) == 0 ) 
+		{	
+			if ( b[q] != BLACK_SPACE )
+			{	
 				atomic_inc(c);
 
-		printf("  %i\n", m);
-	
-		if ( *c == *signature_length ) 
-		{
-			*c = MATCH_FOUND;
-			return;
+				#if ( CL_LOG != 0 )
+				// printf( "a[%u]=%c, b[%u]=%c", p, a[p], q, b[q] );
+				#endif
+			}
 		}
+		
+		if ( *c == *signature_length ) 
+			return;
 	}
 }

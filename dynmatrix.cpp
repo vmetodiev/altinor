@@ -83,3 +83,37 @@ void print_pattern_match_matrix(uint8_t** matrix,
     
     return;
 }
+
+uint8_t* generate_pattern_match_array(uint8_t** matrix,            // Generated matrix 
+                                      uint16_t rows_count,         // Rows count
+                                      uint16_t columns_count)      // Columns count           
+{
+    if ( (rows_count < 1) || (columns_count < 1) )
+        return NULL;
+    
+    // Calculate the new length
+    uint32_t len = rows_count * columns_count;
+    uint8_t* array = (uint8_t *) malloc( sizeof(uint8_t) * (len) );
+
+    uint32_t n = 0;
+    
+    for ( uint32_t i = 0; i < rows_count; i++ )
+        for ( uint16_t j = 0; j < columns_count; j++ )
+            array[n++] = *( *(matrix + i) + j);             
+
+    free(matrix);
+
+    return array;
+}
+
+void print_pattern_match_array(uint8_t* array,                     // Generated array 
+                               uint32_t len)                       // Array length
+{
+    printf("===========================\n");
+    
+    for ( uint32_t i = 0; i < len; i++ )
+        printf( "%c", array[i] );
+    printf("\n");
+
+    printf("===========================\n");
+}

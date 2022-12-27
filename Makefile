@@ -1,11 +1,11 @@
-all: benchmark
+all: experimentNG
 
-benchmark:
+experimentNG:
 	g++ -Wall -Werror -c -o dynmatrix.o dynmatrix.cpp
-	g++ -Wall -Werror -c -o benchmark.o benchmark.cpp
-	g++ -Wall -Werror -o $@ -L -o benchmark.o dynmatrix.o -l OpenCL
+	g++ -Wall -Werror -c -o experimentNG.o experimentNG.cpp
+	g++ -Wall -Werror -o $@ -L -o experimentNG.o dynmatrix.o -l OpenCL
 
 clean:
 	@rm -v dynmatrix.o
-	@rm -v benchmark.o
-	@rm -v benchmark
+	@rm -v experimentNG.o
+	@rm -v experimentNG
