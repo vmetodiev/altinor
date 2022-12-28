@@ -50,3 +50,38 @@ __kernel void matchVectors(
 			return;
 	}
 }
+
+__kernel void matchVectorsNG(
+	__global const uchar *a, 
+	__global const uchar *b,
+	volatile __global uint *c,
+	__global uint *signature_length,
+	__global uint *parts,
+	__global uint *payload_length)
+{		
+	
+	uint n = get_global_id(0);
+	
+	uint p = n % (*payload_length);
+	uint q = n;
+
+	if ( p == 0 )
+		*c = 0;
+
+	if ( ( a[p] ^ b[q] ) == 0 ) 
+	{	
+		if ( b[q] != BLACK_SPACE )
+		{	
+			atomic_inc(c);
+
+			#if ( CL_LOG != 0 )
+			// printf( "a[%u]=%c, b[%u]=%c", p, a[p], q, b[q] );
+			#endif
+		}
+	}
+	
+	if ( *c == *signature_length ) 
+		return;
+
+	// printf( "NG CL, p: %u | q: %u\n", p, q );	
+}
