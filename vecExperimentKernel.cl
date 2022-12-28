@@ -32,7 +32,9 @@ __kernel void matchVectors(
 		#endif
 
 		if ( p == 0 )
+		{	
 			*c = 0;
+		}
 
 		if ( ( a[p] ^ b[q] ) == 0 ) 
 		{	
@@ -45,12 +47,17 @@ __kernel void matchVectors(
 				#endif
 			}
 		}
-		
+		barrier( CLK_GLOBAL_MEM_FENCE );
+
 		if ( *c == *signature_length ) 
 			return;
 	}
 }
 
+/*
+	Not used yet. Consider adding a barrier and re-test. Don't forget to change the
+	size_t globalItemSize = rows * cols; instead of PAYLOAD_LEN
+*/
 __kernel void matchVectorsNG(
 	__global const uchar *a, 
 	__global const uchar *b,
@@ -59,7 +66,6 @@ __kernel void matchVectorsNG(
 	__global uint *parts,
 	__global uint *payload_length)
 {		
-	
 	uint n = get_global_id(0);
 	
 	uint p = n % (*payload_length);

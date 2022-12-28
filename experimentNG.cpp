@@ -19,8 +19,8 @@
 
 int main(int argc, char ** argv) 
 {	
-    const uint32_t PATTERN_LEN = 5;
-    const uint32_t PAYLOAD_LEN = 255;
+    const uint32_t PATTERN_LEN = 14;
+    const uint32_t PAYLOAD_LEN = 256;
 
 	if ( PATTERN_LEN >= PAYLOAD_LEN )
 	{
@@ -39,6 +39,13 @@ int main(int argc, char ** argv)
 	pattern[4] = 'a';
 	pattern[5] = 'm';
 	pattern[6] = 'd';
+	pattern[7] = 'A';
+	pattern[8] = 'M';
+	pattern[9] = 'D';
+	pattern[10] = '*';
+	pattern[11] = 'a';
+	pattern[12] = 'm';
+	pattern[13] = 'd';
 
 	// The packet the may contain the pattern
 	ELEMENT_TYPE* payload = ( ELEMENT_TYPE* )malloc( sizeof(ELEMENT_TYPE) * PAYLOAD_LEN );
@@ -47,6 +54,13 @@ int main(int argc, char ** argv)
 	
 	// Manually insert some bytes inside the packet (payload)
 	int offset = 0;
+	payload[PAYLOAD_LEN - 14 - offset] = 'A';
+	payload[PAYLOAD_LEN - 13 - offset] = 'M';
+	payload[PAYLOAD_LEN - 12 - offset] = 'D';
+	payload[PAYLOAD_LEN - 11 - offset] = '*';
+	payload[PAYLOAD_LEN - 10 - offset] = 'a';
+	payload[PAYLOAD_LEN - 9 - offset] = 'm';
+	payload[PAYLOAD_LEN - 8 - offset] = 'd';
 	payload[PAYLOAD_LEN - 7 - offset] = 'A';
 	payload[PAYLOAD_LEN - 6 - offset] = 'M';
 	payload[PAYLOAD_LEN - 5 - offset] = 'D';
@@ -148,7 +162,6 @@ int main(int argc, char ** argv)
 	c = 0;
 
 	// Copy lists to memory buffers
-	ret = clEnqueueWriteBuffer(commandQueue, aMemObj, CL_TRUE, 0, PAYLOAD_LEN * sizeof(ELEMENT_TYPE), a, 0, NULL, NULL);
 	ret = clEnqueueWriteBuffer(commandQueue, bMemObj, CL_TRUE, 0, rows * cols * sizeof(ELEMENT_TYPE), b, 0, NULL, NULL);
 	ret = clEnqueueWriteBuffer(commandQueue, dMemObj, CL_TRUE, 0, sizeof(uint32_t), (const void*)(&d), 0, NULL, NULL);
 	ret = clEnqueueWriteBuffer(commandQueue, eMemObj, CL_TRUE, 0, sizeof(uint32_t), (const void*)(&e), 0, NULL, NULL);
@@ -156,19 +169,24 @@ int main(int argc, char ** argv)
 
 	ret = clEnqueueWriteBuffer(commandQueue, cMemObj, CL_TRUE, 0, sizeof(uint32_t), (const void*)(&c), 0, NULL, NULL);
 
-	// Execute kernel
-	ret = clEnqueueNDRangeKernel(commandQueue, kernel, clDimensions, NULL, &globalItemSize, NULL, 0, NULL, NULL);
-	
-	// Get the result
-	ret = clEnqueueReadBuffer(commandQueue, cMemObj, CL_TRUE, 0, sizeof(c), (void *)&c, 0, NULL, NULL);
+	//while ( 1 )
+	//{
+		// Enque the packet buffer
+		ret = clEnqueueWriteBuffer(commandQueue, aMemObj, CL_TRUE, 0, PAYLOAD_LEN * sizeof(ELEMENT_TYPE), a, 0, NULL, NULL);
+		
+		// Execute kernel
+		ret = clEnqueueNDRangeKernel(commandQueue, kernel, clDimensions, NULL, &globalItemSize, NULL, 0, NULL, NULL);
+		
+		// Get the result
+		ret = clEnqueueReadBuffer(commandQueue, cMemObj, CL_TRUE, 0, sizeof(c), (void *)&c, 0, NULL, NULL);
 
-	// Write result
-	printf("Rows = %u, Cols = %u\n", rows, cols );
-	printf("CL return value: = %u\n", c);
-	if ( c == PATTERN_LEN )
-	{
-		printf("-----> MATCH! \n");
-	}
+		// Write result
+		
+		printf("Rows = %u, Cols = %u\n", rows, cols );
+		printf("CL return value: = %u\n", c);
+		if ( c == PATTERN_LEN )
+			printf("-----> MATCH! \n");
+	//}
 
 	ret = clFlush(commandQueue);
 	ret = clFinish(commandQueue);
