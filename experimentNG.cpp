@@ -169,6 +169,9 @@ int main(int argc, char ** argv)
 
 	ret = clEnqueueWriteBuffer(commandQueue, cMemObj, CL_TRUE, 0, sizeof(uint32_t), (const void*)(&c), 0, NULL, NULL);
 
+	//
+	// Main loop
+	// 
 	//while ( 1 )
 	//{
 		// Enque the packet buffer
@@ -187,6 +190,9 @@ int main(int argc, char ** argv)
 		if ( c == PATTERN_LEN )
 			printf("-----> MATCH! \n");
 	//}
+	//
+	// End of Main loop
+	//
 
 	ret = clFlush(commandQueue);
 	ret = clFinish(commandQueue);
