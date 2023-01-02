@@ -1,0 +1,9 @@
+# ip link add veth0 type veth peer name veth1
+
+# ip netns add pktgen
+# ip netns show
+# ip netns list
+
+# ip link set veth1 netns pktgen
+
+# ip netns exec pktgen ...
