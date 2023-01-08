@@ -50,7 +50,7 @@ void handle_packet(unsigned char* buffer, int buf_len)
 		struct tcphdr *tcp = (struct tcphdr *)((char *)ip + iphdrlen);
 		uint16_t tcphdrlen = (tcp->doff * 4);
 
-		data = ( buffer + sizeof(struct ethhdr) + iphdrlen + tcphdrlen);		
+		data = ( buffer + sizeof(struct ethhdr) + iphdrlen + tcphdrlen );		
 		payload_len = ntohs(ip->tot_len) - tcphdrlen - iphdrlen;
 
 		//printf("TCP Payload from IP %.4X \n", ip->saddr);

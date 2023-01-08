@@ -3,45 +3,181 @@
 // sudo apt install opencl-headers
 // sudo apt install ocl-icd-opencl-dev
 //
-// Compile with:
-// c++ experiment.cpp -o experiment -l OpenCL 
-// (or g++)
-//
 
 #include <stdio.h>
-#include <stdlib.h>
-#include <math.h>
 #include <CL/cl.h>
+#include <string.h>
+#include <stdbool.h>
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <unistd.h>
+#include <linux/if_packet.h>
+#include <netinet/in.h>		 
+#include <netinet/if_ether.h>
+#include <netinet/ip.h>
+#include <netinet/udp.h>
+#include <netinet/tcp.h>
+#include <arpa/inet.h>
+
+#include "dynmatrix.h"
+#include "experiment.h"
+
+#define ENABLE_LOG ( 0 )
 
 #define MAX_SOURCE_SIZE (0x100000)
 #define ELEMENT_TYPE uint8_t
-#define LEN 10
-#define PATTERN_LEN 3
-#define TEMP_ROWS 3
 
-int main(int argc, char ** argv) {
+#define ETH_IFACE_NAME "enp2s0"
+#define RCV_BUFFER_SIZE 65536
+
+#define TCP_PACKET  6
+#define UDP_PACKET 17
+
+const uint32_t PATTERN_LEN = SIGNATURE_LEN;
+const uint32_t CL_PAYLOAD_CHUNK_LEN = 256;
+
+uint16_t rows = 0;
+uint16_t cols = 0;
+
+volatile uint32_t c = 0;
+
+size_t globalItemSize = CL_PAYLOAD_CHUNK_LEN;
+
+cl_uint clDimensions  = 1;
+cl_command_queue commandQueue = NULL;
+cl_kernel kernel = NULL;
+
+cl_mem aMemObj = NULL;
+cl_mem bMemObj = NULL;
+cl_mem cMemObj = NULL;
+cl_mem dMemObj = NULL;
+cl_mem eMemObj = NULL;
+cl_mem fMemObj = NULL;
+
+#define OPENCL_MATCH_LOGIC()\
+	ret = clEnqueueWriteBuffer(commandQueue, aMemObj, CL_TRUE, offset, CL_PAYLOAD_CHUNK_LEN * sizeof(ELEMENT_TYPE), a, 0, NULL, NULL);\
+	if ( ret != CL_SUCCESS )\
+		return;\
+	ret = clEnqueueNDRangeKernel(commandQueue, kernel, clDimensions, NULL, &globalItemSize, NULL, 0, NULL, NULL);\
+	if ( ret != CL_SUCCESS )\
+		return;\
+	ret = clEnqueueReadBuffer(commandQueue, cMemObj, CL_TRUE, 0, sizeof(c), (void *)&c, 0, NULL, NULL);\
+	if ( ret != CL_SUCCESS )\
+		return;\
+	if ( c == PATTERN_LEN )\
+		printf( "%s from IP %s \n", ALERT_MSG, inet_ntoa( *(struct in_addr *)&ip->saddr) );
+
+void handle_packet(unsigned char* buffer, int buf_len)
+{
+	struct iphdr *ip = (struct iphdr*)(buffer + sizeof (struct ethhdr));
+	uint16_t iphdrlen = ip->ihl*4;
 	
-	int SIZE = LEN;
+	uint8_t *payload_ptr = NULL;
+	uint32_t payload_len =  0;
 
-	ELEMENT_TYPE string[SIZE] =
-        { 
-			'A', 'M', 'D', 'M', 'D', 'D', '2', '3', '4', '5' 
-		}; // Packet (payload)
-   
-    ELEMENT_TYPE buffer[4 * SIZE] =
-        { 
-			'A', 'M', 'D', 'X', 'X', 'X', 'X', 'X', 'X', 'X', 
-			'X', 'A', 'M', 'D', 'x', 'X', 'X', 'X', 'X', 'X',
-			'X', 'X', 'A', 'M', 'D', 'X', 'X', 'X', 'X', 'X', 
-			'X', 'X', 'X', 'A', 'M', 'D', 'X', 'X', 'X', 'X'
-		}; // Signature table
+	if ( ip->protocol == UDP_PACKET )
+	{
+		payload_ptr = ( buffer + sizeof(struct ethhdr) + iphdrlen + sizeof(struct udphdr) );
+		payload_len =  ( buf_len - ( sizeof(struct ethhdr) + iphdrlen + sizeof(struct udphdr) ) );
 
-	ELEMENT_TYPE* a = string;
+		#if ( ENABLE_LOG == 1 )
+			printf("UDP Payload from IP %.4X \n", ip->saddr);
+			printf("UDP %u bytes payload from IP %s \n", payload_len, inet_ntoa( *(struct in_addr *)&ip->saddr) );
+			for ( uint32_t i = 0; i < payload_len; i++ )
+				printf("%c", payload_ptr[i]); // %.2X
+			
+			printf( "_______________________________\n" );
+		#endif
+
+		goto inspect_pkt;
+	}
+
+	if ( ip->protocol == TCP_PACKET )
+	{		
+		struct tcphdr *tcp = (struct tcphdr *)((char *)ip + iphdrlen);
+		uint16_t tcphdrlen = (tcp->doff * 4);
+
+		payload_ptr = ( buffer + sizeof(struct ethhdr) + iphdrlen + tcphdrlen );		
+		payload_len = ntohs(ip->tot_len) - tcphdrlen - iphdrlen;
+
+		#if ( ENABLE_LOG == 1 )
+			printf("TCP Payload from IP %.4X \n", ip->saddr);
+			printf("TCP %u bytes payload from IP %s \n", payload_len, inet_ntoa( *(struct in_addr *)&ip->saddr) );
+			for ( uint32_t i = 0; i < payload_len; i++ )
+				printf("%c", payload_ptr[i]); // %.2X
+			
+			printf( "_______________________________\n" );
+		#endif
+
+		goto inspect_pkt;
+	}
+
+	inspect_pkt:
+		cl_int ret;
+		ELEMENT_TYPE* a = payload_ptr;
+
+		uint32_t loop_payload_len = payload_len;
+    	uint32_t offset = 0;
+ 
+		if ( (payload_len / CL_PAYLOAD_CHUNK_LEN) > 0 )
+		{
+			do {
+				OPENCL_MATCH_LOGIC();
+				
+				offset += CL_PAYLOAD_CHUNK_LEN;
+				loop_payload_len -= CL_PAYLOAD_CHUNK_LEN;
+
+			} while ( loop_payload_len >= CL_PAYLOAD_CHUNK_LEN );
+			
+			if ( loop_payload_len > 0 )
+			{
+				// Set the offset to point to the last chuck
+				offset = payload_len - CL_PAYLOAD_CHUNK_LEN;
+				
+				OPENCL_MATCH_LOGIC();
+			}
+		}
+
+		else
+		{
+			offset = 0;	
+			OPENCL_MATCH_LOGIC();
+		}
+	
+	return;
+}
+
+int main(int argc, char ** argv) 
+{	
+	if ( PATTERN_LEN >= CL_PAYLOAD_CHUNK_LEN )
+	{
+		printf("Fatal: PATTERN_LEN is greater than or equal to the CL_PAYLOAD_CHUNK_LEN!\n");
+	}
+
+	ELEMENT_TYPE* pattern = ( ELEMENT_TYPE* )malloc( sizeof(ELEMENT_TYPE) * CL_PAYLOAD_CHUNK_LEN );
+	for ( uint32_t i = 0; i < CL_PAYLOAD_CHUNK_LEN; i++ )
+		pattern[i] = 0x00;
+	
+	for ( uint32_t i = 0; i < SIGNATURE_LEN; i++ )
+		pattern[i] = signature[i];
+
+    ELEMENT_TYPE** matrix = generate_pattern_match_matrix( pattern, PATTERN_LEN, CL_PAYLOAD_CHUNK_LEN, &rows, &cols );
+    // print_pattern_match_matrix(matrix, rows, cols);
+
+    ELEMENT_TYPE* buffer = generate_pattern_match_array( matrix, rows, cols );
+
+	printf("Generated buffer len: %u\n", (rows * cols) );
+
 	ELEMENT_TYPE* b = buffer;
-	volatile uint32_t c = 0;
-	uint32_t d = SIZE; // Length (or the MTU/MSS/Packet Payload size)
-	uint32_t e = 4;    // Parts  (rows in the pattern tables foreach signature)
-	uint32_t f = 3;    // Pattern (signature) length
+	uint32_t d = PATTERN_LEN;    // Singature length
+	uint32_t e = rows;           // Parts  (rows in the pattern tables foreach signature)
+	uint32_t f = cols;
+
+	if ( cols != CL_PAYLOAD_CHUNK_LEN )
+	{
+		printf( "Pattern Matrix column count (%u) does not match CL_PAYLOAD_CHUNK_LEN!\n", cols );
+		return -1;
+	}
 
 	// Load kernel from file vecExperimentKernel
 	FILE *kernelFile;
@@ -77,16 +213,16 @@ int main(int argc, char ** argv) {
 	cl_context context = clCreateContext(NULL, 1, &deviceID, NULL, NULL, &ret);
 
 	// Creating command queue
-	cl_command_queue commandQueue = clCreateCommandQueueWithProperties(context, deviceID, 0, &ret);
+	commandQueue = clCreateCommandQueueWithProperties(context, deviceID, 0, &ret);
 
-	// Memory buffers for each array
-	cl_mem aMemObj = clCreateBuffer(context, CL_MEM_ALLOC_HOST_PTR | CL_MEM_READ_ONLY, 	   SIZE * sizeof(ELEMENT_TYPE), NULL, &ret);
-	cl_mem bMemObj = clCreateBuffer(context, CL_MEM_ALLOC_HOST_PTR | CL_MEM_READ_ONLY, e * SIZE * sizeof(ELEMENT_TYPE), NULL, &ret);
-	cl_mem dMemObj = clCreateBuffer(context, CL_MEM_ALLOC_HOST_PTR | CL_MEM_READ_ONLY,        	  sizeof(uint32_t), NULL, &ret); 
-	cl_mem eMemObj = clCreateBuffer(context, CL_MEM_ALLOC_HOST_PTR | CL_MEM_READ_ONLY,            sizeof(uint32_t), NULL, &ret); 
-	cl_mem fMemObj = clCreateBuffer(context, CL_MEM_ALLOC_HOST_PTR | CL_MEM_READ_ONLY,            sizeof(uint32_t), NULL, &ret);
+	// Memory buffers for each array - CL_MEM_ALLOC_HOST_PTR
+	aMemObj = clCreateBuffer(context, CL_MEM_ALLOC_HOST_PTR | CL_MEM_READ_ONLY, CL_PAYLOAD_CHUNK_LEN * sizeof(ELEMENT_TYPE), NULL, &ret);
+	bMemObj = clCreateBuffer(context, CL_MEM_ALLOC_HOST_PTR | CL_MEM_READ_ONLY, rows * cols * sizeof(ELEMENT_TYPE), NULL, &ret);
+	dMemObj = clCreateBuffer(context, CL_MEM_ALLOC_HOST_PTR | CL_MEM_READ_ONLY, sizeof(uint32_t), NULL, &ret); 
+	eMemObj = clCreateBuffer(context, CL_MEM_ALLOC_HOST_PTR | CL_MEM_READ_ONLY, sizeof(uint32_t), NULL, &ret); 
+	fMemObj = clCreateBuffer(context, CL_MEM_ALLOC_HOST_PTR | CL_MEM_READ_ONLY, sizeof(uint32_t), NULL, &ret);
 
-	cl_mem cMemObj = clCreateBuffer(context, CL_MEM_ALLOC_HOST_PTR | CL_MEM_READ_WRITE,       	  sizeof(uint32_t), NULL, &ret); 
+	cMemObj = clCreateBuffer(context, CL_MEM_ALLOC_HOST_PTR | CL_MEM_READ_WRITE, sizeof(uint32_t), NULL, &ret); 
 
 	// Create program from kernel source
 	cl_program program = clCreateProgramWithSource(context, 1, (const char **)&kernelSource, (const size_t *)&kernelSize, &ret);
@@ -95,7 +231,7 @@ int main(int argc, char ** argv) {
 	ret = clBuildProgram(program, 1, &deviceID, NULL, NULL, NULL);
 
 	// Create kernel
-	cl_kernel kernel = clCreateKernel(program, "matchVectors", &ret);
+	kernel = clCreateKernel(program, "matchVectors", &ret);
 
 	// Set arguments for kernel
 	ret = clSetKernelArg(kernel, 0, sizeof(cl_mem), (void *)&aMemObj);
@@ -105,45 +241,73 @@ int main(int argc, char ** argv) {
 	ret = clSetKernelArg(kernel, 4, sizeof(cl_mem), (void *)&eMemObj);
 	ret = clSetKernelArg(kernel, 5, sizeof(cl_mem), (void *)&fMemObj);
 
-	// Execute the kernel
-
-	size_t globalItemSize = SIZE;
-	size_t localItemSize = SIZE;
-	cl_uint clDimensions = 1;
-
-	c = 0;
-
-	// Copy lists to memory buffers
-	ret = clEnqueueWriteBuffer(commandQueue, aMemObj, CL_TRUE, 0, SIZE * sizeof(ELEMENT_TYPE), a, 0, NULL, NULL);
-	ret = clEnqueueWriteBuffer(commandQueue, bMemObj, CL_TRUE, 0, 4 * SIZE * sizeof(ELEMENT_TYPE), b, 0, NULL, NULL);
+	// Buffer 'a' is enqued inside handle_packet
+	ret = clEnqueueWriteBuffer(commandQueue, bMemObj, CL_TRUE, 0, rows * cols * sizeof(ELEMENT_TYPE), b, 0, NULL, NULL);
+	// Buffer 'c' is enqued inside handle_packet
 	ret = clEnqueueWriteBuffer(commandQueue, dMemObj, CL_TRUE, 0, sizeof(uint32_t), (const void*)(&d), 0, NULL, NULL);
 	ret = clEnqueueWriteBuffer(commandQueue, eMemObj, CL_TRUE, 0, sizeof(uint32_t), (const void*)(&e), 0, NULL, NULL);
 	ret = clEnqueueWriteBuffer(commandQueue, fMemObj, CL_TRUE, 0, sizeof(uint32_t), (const void*)(&f), 0, NULL, NULL);
-
 	ret = clEnqueueWriteBuffer(commandQueue, cMemObj, CL_TRUE, 0, sizeof(uint32_t), (const void*)(&c), 0, NULL, NULL);
 
-	// Execute kernel
-	ret = clEnqueueNDRangeKernel(commandQueue, kernel, clDimensions, NULL, &globalItemSize, &localItemSize, 0, NULL, NULL);
-	
-	// Get the result
-	ret = clEnqueueReadBuffer(commandQueue, cMemObj, CL_TRUE, 0, sizeof(c), (void *)&c, 0, NULL, NULL);
+	int sock_raw_fd, saddr_len, buf_len;
+	struct sockaddr saddr;
 
-	// Write result
-	printf("Result: c = %u\n", c);
-	if ( c == 255 )
+	unsigned char* pkt_buffer = (unsigned char *)malloc(RCV_BUFFER_SIZE); 
+	memset(pkt_buffer, 0, RCV_BUFFER_SIZE);
+
+	printf("INFO: Starting... \n");
+
+	sock_raw_fd = socket( AF_PACKET, SOCK_RAW, htons(ETH_P_ALL) );
+	if( sock_raw_fd < 0 )
 	{
-		printf("MATCH! \n");
+		printf("FATAL: Error creating a raw socket!\n");
+		return -1;
 	}
+	
+	int success = setsockopt( sock_raw_fd, SOL_SOCKET, SO_BINDTODEVICE, ETH_IFACE_NAME, strlen(ETH_IFACE_NAME) );
+	if ( success != 0 )
+		printf("ERROR: Could not bind to iface %s with ret val: %d\n", ETH_IFACE_NAME, success);
+
+	//
+	// Main loop
+	// 
+	while ( 1 )
+	{
+		saddr_len = sizeof(saddr);
+		buf_len = recvfrom(sock_raw_fd, pkt_buffer, RCV_BUFFER_SIZE, 0, &saddr, (socklen_t *)&saddr_len);
+
+		if( buf_len < 0 )
+		{
+			printf("ERROR: recvfrom()\n");
+			return -1;
+		}
+
+		handle_packet(pkt_buffer, buf_len);
+	}
+	//
+	// End of Main loop
+	//
+
+	close(sock_raw_fd);
 
 	ret = clFlush(commandQueue);
 	ret = clFinish(commandQueue);
 	ret = clReleaseCommandQueue(commandQueue);
 	ret = clReleaseKernel(kernel);
 	ret = clReleaseProgram(program);
+
 	ret = clReleaseMemObject(aMemObj);
 	ret = clReleaseMemObject(bMemObj);
 	ret = clReleaseMemObject(cMemObj);
-	ret = clReleaseContext(context);
+	ret = clReleaseMemObject(dMemObj);
+	ret = clReleaseMemObject(eMemObj);
+	ret = clReleaseMemObject(fMemObj);
 	
+	ret = clReleaseContext(context);
+
+	free(pattern);
+	free(buffer);
+
+	printf("Terminating...\n");
 	return 0;
 }

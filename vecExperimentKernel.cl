@@ -46,6 +46,8 @@ __kernel void matchVectors(
 				// printf( "a[%u]=%c, b[%u]=%c", p, a[p], q, b[q] );
 				#endif
 			}
+			else
+				*c = 0;
 		}
 		barrier( CLK_GLOBAL_MEM_FENCE );
 
