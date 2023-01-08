@@ -22,17 +22,6 @@
 #include "dynmatrix.h"
 #include "experiment.h"
 
-#define ENABLE_LOG ( 0 )
-
-#define MAX_SOURCE_SIZE (0x100000)
-#define ELEMENT_TYPE uint8_t
-
-#define ETH_IFACE_NAME "enp2s0"
-#define RCV_BUFFER_SIZE 65536
-
-#define TCP_PACKET  6
-#define UDP_PACKET 17
-
 const uint32_t PATTERN_LEN = SIGNATURE_LEN;
 const uint32_t CL_PAYLOAD_CHUNK_LEN = 256;
 
@@ -54,27 +43,15 @@ cl_mem dMemObj = NULL;
 cl_mem eMemObj = NULL;
 cl_mem fMemObj = NULL;
 
-#define OPENCL_MATCH_LOGIC()\
-	ret = clEnqueueWriteBuffer(commandQueue, aMemObj, CL_TRUE, offset, CL_PAYLOAD_CHUNK_LEN * sizeof(ELEMENT_TYPE), a, 0, NULL, NULL);\
-	if ( ret != CL_SUCCESS )\
-		return;\
-	ret = clEnqueueNDRangeKernel(commandQueue, kernel, clDimensions, NULL, &globalItemSize, NULL, 0, NULL, NULL);\
-	if ( ret != CL_SUCCESS )\
-		return;\
-	ret = clEnqueueReadBuffer(commandQueue, cMemObj, CL_TRUE, 0, sizeof(c), (void *)&c, 0, NULL, NULL);\
-	if ( ret != CL_SUCCESS )\
-		return;\
-	if ( c == PATTERN_LEN )\
-		printf( "%s from IP %s \n", ALERT_MSG, inet_ntoa( *(struct in_addr *)&ip->saddr) );
-
 void handle_packet(unsigned char* buffer, int buf_len)
 {
-	struct iphdr *ip = (struct iphdr*)(buffer + sizeof (struct ethhdr));
+	struct iphdr *ip = (struct iphdr*)( buffer + sizeof(struct ethhdr) );
 	uint16_t iphdrlen = ip->ihl*4;
 	
 	uint8_t *payload_ptr = NULL;
 	uint32_t payload_len =  0;
 
+	#if ( INSPECT_UDP == 1 )
 	if ( ip->protocol == UDP_PACKET )
 	{
 		payload_ptr = ( buffer + sizeof(struct ethhdr) + iphdrlen + sizeof(struct udphdr) );
@@ -91,7 +68,9 @@ void handle_packet(unsigned char* buffer, int buf_len)
 
 		goto inspect_pkt;
 	}
+	#endif
 
+	#if ( INSPECT_TCP == 1 )
 	if ( ip->protocol == TCP_PACKET )
 	{		
 		struct tcphdr *tcp = (struct tcphdr *)((char *)ip + iphdrlen);
@@ -111,6 +90,7 @@ void handle_packet(unsigned char* buffer, int buf_len)
 
 		goto inspect_pkt;
 	}
+	#endif
 
 	inspect_pkt:
 		cl_int ret;
@@ -122,6 +102,11 @@ void handle_packet(unsigned char* buffer, int buf_len)
 		if ( (payload_len / CL_PAYLOAD_CHUNK_LEN) > 0 )
 		{
 			do {
+				#if ( ENABLE_LOG == 1 )
+					for ( uint32_t i = offset; i < offset + CL_PAYLOAD_CHUNK_LEN; i++ )
+						printf("%c", payload_ptr[i]);
+				#endif
+
 				OPENCL_MATCH_LOGIC();
 				
 				offset += CL_PAYLOAD_CHUNK_LEN;
@@ -129,18 +114,36 @@ void handle_packet(unsigned char* buffer, int buf_len)
 
 			} while ( loop_payload_len >= CL_PAYLOAD_CHUNK_LEN );
 			
+			#if ( ENABLE_LOG == 1 )
+				printf("loop_payload_len: %u\n", loop_payload_len);
+				printf("payload_len: %u\n", payload_len);
+			#endif
+
 			if ( loop_payload_len > 0 )
 			{
 				// Set the offset to point to the last chuck
 				offset = payload_len - CL_PAYLOAD_CHUNK_LEN;
 				
+				#if ( ENABLE_LOG == 1 )
+					printf("end offset: %u\n", offset);
+					
+					for ( uint32_t i = offset; i < offset + CL_PAYLOAD_CHUNK_LEN; i++ )
+						printf("%c", payload_ptr[i]);
+				#endif
+
 				OPENCL_MATCH_LOGIC();
 			}
 		}
 
-		else
+		else if ( payload_len > 0 )
 		{
 			offset = 0;	
+
+			#if ( ENABLE_LOG == 1 )
+			for ( uint32_t i = 0; i < payload_len; i++ )
+					printf("%c", payload_ptr[i+offset]);
+			#endif
+				
 			OPENCL_MATCH_LOGIC();
 		}
 	
