@@ -46,8 +46,8 @@ __kernel void matchVectors(
 				// printf( "a[%u]=%c, b[%u]=%c", p, a[p], q, b[q] );
 				#endif
 			}
-			else
-				*c = 0;
+			else         // Consider removing this and using the sum of two consequent executions - in case
+				*c = 0;  // the signature is divided between the end of packet N and the begging of packet N+1
 		}
 		barrier( CLK_GLOBAL_MEM_FENCE );
 
@@ -60,7 +60,7 @@ __kernel void matchVectors(
 	Not used yet. Consider adding a barrier and re-test. Don't forget to change the
 	size_t globalItemSize = rows * cols; instead of PAYLOAD_LEN
 */
-__kernel void matchVectorsNG(
+__kernel void matchVectorsAlternative(
 	__global const uchar *a, 
 	__global const uchar *b,
 	volatile __global uint *c,

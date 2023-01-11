@@ -20,7 +20,7 @@
 #include <arpa/inet.h>
 
 #include "dynmatrix.h"
-#include "experiment.h"
+#include "altinor.h"
 
 const uint32_t PATTERN_LEN = SIGNATURE_LEN;
 const uint32_t CL_PAYLOAD_CHUNK_LEN = 256;
@@ -182,16 +182,16 @@ int main(int argc, char ** argv)
 		return -1;
 	}
 
-	// Load kernel from file vecExperimentKernel
+	// Load kernel from file vecAltinorKernel
 	FILE *kernelFile;
 	char *kernelSource;
 	size_t kernelSize;
 
-	kernelFile = fopen("vecExperimentKernel.cl", "r");
+	kernelFile = fopen("vecAltinorKernel.cl", "r");
 
 	if (!kernelFile) {
 
-		fprintf(stderr, "No file named vecExperimentKernel.cl was found\n");
+		fprintf(stderr, "No file named vecAltinorKernel.cl was found\n");
 		exit(-1);
 	}
 
