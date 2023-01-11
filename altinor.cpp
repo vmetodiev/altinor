@@ -140,8 +140,8 @@ void handle_packet(unsigned char* buffer, int buf_len)
 			offset = 0;	
 
 			#if ( ENABLE_LOG == 1 )
-			for ( uint32_t i = 0; i < payload_len; i++ )
-					printf("%c", payload_ptr[i+offset]);
+				for ( uint32_t i = 0; i < payload_len; i++ )
+						printf("%c", payload_ptr[i+offset]);
 			#endif
 				
 			OPENCL_MATCH_LOGIC();
@@ -266,10 +266,16 @@ int main(int argc, char ** argv)
 		printf("FATAL: Error creating a raw socket!\n");
 		return -1;
 	}
-	
-	int success = setsockopt( sock_raw_fd, SOL_SOCKET, SO_BINDTODEVICE, ETH_IFACE_NAME, strlen(ETH_IFACE_NAME) );
-	if ( success != 0 )
-		printf("ERROR: Could not bind to iface %s with ret val: %d\n", ETH_IFACE_NAME, success);
+
+	#if ( ATTEMPT_ZERO_COPY_OPTION == 1 )
+		int success_zero_copy = setsockopt( sock_raw_fd, SOL_SOCKET, SO_ZEROCOPY, ETH_IFACE_NAME, strlen(ETH_IFACE_NAME) );
+		if ( success_zero_copy != 0 )
+			printf("ERROR: Could not set zerocopy option to iface %s with ret val: %d.\n", ETH_IFACE_NAME, success_zero_copy);
+	#endif
+
+	int success_bind = setsockopt( sock_raw_fd, SOL_SOCKET, SO_BINDTODEVICE, ETH_IFACE_NAME, strlen(ETH_IFACE_NAME) );
+	if ( success_bind != 0 )
+		printf("ERROR: Could not bind to iface %s with ret val: %d\n", ETH_IFACE_NAME, success_bind);
 
 	//
 	// Main loop
