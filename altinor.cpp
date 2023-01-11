@@ -19,7 +19,7 @@
 #include <netinet/tcp.h>
 #include <arpa/inet.h>
 
-#include "dynmatrix.h"
+#include "signature_ocl_matrix.h"
 #include "altinor.h"
 
 const uint32_t PATTERN_LEN = SIGNATURE_LEN;

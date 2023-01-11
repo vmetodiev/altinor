@@ -1,5 +1,5 @@
-#ifndef DYNMATRIX_H
-#define DYNMATRIX
+#ifndef SIGNATURE_OCL_MATRIX_H
+#define SIGNATURE_OCL_MATRIX_H
 
 #pragma once
 

@@ -1,11 +1,11 @@
 all: altinor
 
 altinor:
-	g++ -Wall -Werror -c -o dynmatrix.o dynmatrix.cpp
+	g++ -Wall -Werror -c -o signature_ocl_matrix.o signature_ocl_matrix.cpp
 	g++ -Wall -Werror -c -o altinor.o altinor.cpp
-	g++ -Wall -Werror -o $@ -L -o altinor.o dynmatrix.o -l OpenCL
+	g++ -Wall -Werror -o $@ -L -o altinor.o signature_ocl_matrix.o -l OpenCL
 
 clean:
-	@rm -v dynmatrix.o
+	@rm -v signature_ocl_matrix.o
 	@rm -v altinor.o
 	@rm -v altinor

@@ -1,5 +1,5 @@
-#ifndef EXPERIMENT_H
-#define EXPERIMENT_H
+#ifndef ALTINOR_H
+#define ALTINOR_H
 
 #include "config.h"
 

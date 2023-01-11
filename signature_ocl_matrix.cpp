@@ -1,5 +1,5 @@
 #include <stdio.h>
-#include "dynmatrix.h"
+#include "signature_ocl_matrix.h"
 
 uint8_t** generate_pattern_match_matrix(uint8_t* pattern,
                                         uint16_t pattern_len,
