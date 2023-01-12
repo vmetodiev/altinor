@@ -7,7 +7,7 @@ This is the visual representation of the parallelised pattern search:
 ![Screenshot](https://github.com/vmetodiev/altinor/blob/master/pics/ALGO.JPG)<br />
 
 # Applications
-This repo contains an example that implements a network IDS (instrusion detection system), capable for inspecting TCP and/or UDP packets.
+This repository contains an example that implements a network Instrusion Detection System (IDS), capable for inspecting TCP and/or UDP packets.
 It works similarly to a packet sniffer, intercepting packets at OSI L2 via a Linux raw socket.
 
 Upon detecting the configured packet signature, Altinor will log a message on the stdout with the source IP address of the attacker. 
@@ -110,7 +110,13 @@ The current Altinor implementation is a pure proof-of-concept experiment.
 3. The current implemention may miss the signature in case it is fragmented between two packets. This will be fixed.
   
 4. Only one signature can be inspected per process. For more, compile and launch another 'instance' and run it as a separate process - one may also try to automate this via Docker, Ansible and other DevOps-oriented tools.  
-  
+
+# In progress...
+The author is currently working on:
+
+1. A CLI shell based on Radix Tree
+
+2. Multi-signature hot-plug support - without interrupting the running process
 
 # Future
 Future versions will add in-line IPS functionality using DPDK. 
