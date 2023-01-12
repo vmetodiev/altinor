@@ -105,6 +105,8 @@ The current Altinor implementation is a pure proof-of-concept experiment.
   
 
 # Future
-Future versions will add in-line IPS functionality using DPDK.  
+Future versions will add in-line IPS functionality using DPDK. 
+
 The author is also considering integrating the Altinor engine as an nginx module for HTTP inspection.  
+
 Aside from GPUs, other parallel accelerators could be much more interesting and applicable for parallel pattern matching (like the Tenstorrent GraySkull).
