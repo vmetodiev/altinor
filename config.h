@@ -8,6 +8,8 @@
 // User config "section"
 // 
 
+#define NETWORK_INTERFACE_NAME "enp2s0"
+
 #define ATTEMPT_ZERO_COPY_OPTION ( 0 )
 
 #define INSPECT_TCP ( 1 )

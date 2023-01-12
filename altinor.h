@@ -8,7 +8,7 @@
 #define MAX_SOURCE_SIZE (0x100000)
 #define ELEMENT_TYPE uint8_t
 
-#define ETH_IFACE_NAME "enp2s0"
+#define ETH_IFACE_NAME NETWORK_INTERFACE_NAME
 #define RCV_BUFFER_SIZE 65536
 
 #define TCP_PACKET  6

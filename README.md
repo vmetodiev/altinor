@@ -26,13 +26,21 @@ $ ./sudo altinor
 # Example usage
 Open the config.h file. 
 
-## Payload signature
-Describe the signature inside the array - byte by byte, or char by char, follow the standard C/C++ syntax.
-The signature length should also be specified inside the SIGNATURE_LEN macro.
+## Network Interface
+Set the sniffing network interface:
+```
+#define NETWORK_INTERFACE_NAME "enp2s0"
+```
 
+## Payload signature
+Describe the signature inside the array - byte by byte, or char by char, follow the standard C/C++ syntax:
+```
+uint8_t signature[] = { 'E', 'x', 'p', 'l', 'o', 'i', 't', 'B', 'y', 't', 'e', 's', '0', 'P' };
+```
+
+The signature length should also be specified inside the SIGNATURE_LEN macro:
 ```
 #define SIGNATURE_LEN ( 14 )
-uint8_t signature[] = { 'E', 'x', 'p', 'l', 'o', 'i', 't', 'B', 'y', 't', 'e', 's', '0', 'P' };
 ```
 
 ## Define what kind of traffic to inspect:
@@ -101,7 +109,7 @@ The current Altinor implementation is a pure proof-of-concept experiment.
   
 3. The current implemention may miss the signature in case it is fragmented between two packets. This will be fixed.
   
-4. Only one signature can be inspected per process. For more, start compile another 'intance' and run it as a separate process - one may also try to automate this via Docker, Ansible and other DevOps-oriented tools.  
+4. Only one signature can be inspected per process. For more, compile and launch another 'instance' and run it as a separate process - one may also try to automate this via Docker, Ansible and other DevOps-oriented tools.  
   
 
 # Future
