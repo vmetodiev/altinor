@@ -1,5 +1,5 @@
 # Altinor
-Altinor is a minimalistic, highly parallel byte-level pattern matching engine, written in OpenCL and C.
+Altinor is a minimalistic, highly parallel byte-level pattern matching engine for deep packet inspection (DPI), written in OpenCL and C.
 The current PoC implementation runs on an AMD Radeon GPU.
 
 # Algorithm
@@ -11,12 +11,13 @@ This repo contains an example that implements a network IDS (instrusion detectio
 It works similarly to a packet sniffer, intecepting packets at OSI L2 via a Linux raw socket.
 
 Upon detecting the configured packet signature, Altinor will log a message on the stdout with the source IP address of the attacker. 
-Some (Python) scripting could be used to poll the alert message and react via compiling and applying an XDP/eBPF on the interface.
+Some (Python) scripting could further be used to poll the alert message and react via compiling and applying an XDP/eBPF action on the interface.
 
 # Build Instructions
 Install the AMD drivers and OpenCL development packages. Below is an example for Ubuntu:
 
 ```
+$ amdgpu-install --usecase=graphics,opencl --vulkan=amdvlk --opencl=legacy
 $ sudo apt install opencl-headers
 $ sudo apt install ocl-icd-opencl-dev
 $ make
@@ -25,7 +26,7 @@ $ ./sudo altinor
 # Example usage
 Open the config.h file. 
 
-## Paylaod signature
+## Payload signature
 Describe the signature inside the array - byte by byte, or char by char, follow the standard C/C++ syntax.
 The signature length should also be specified inside the SIGNATURE_LEN macro.
 
@@ -43,7 +44,7 @@ For TCP ony:
 
 For UDP only:
 ```
-#define INSPECT_TCP ( 1 )
+#define INSPECT_TCP ( 0 )
 #define INSPECT_UDP ( 1 )
 ```
 
@@ -52,13 +53,14 @@ For both TCP and UDP:
 #define INSPECT_TCP ( 1 )
 #define INSPECT_UDP ( 1 )
 ```
-## Configure zero copy on the interface
+## Configure zero-copy on the interface
 Use the following option to attempt switching the listening interface to zero-copy mode.
-Note: this may not work in many cases. Observer the log upon lauching the application.
-
 ```
 #define ATTEMPT_ZERO_COPY_OPTION ( 1 )
-```
+```  
+
+Note: this may not work in many cases. Observer the log upon lauching the application.
+
 
 ## (Re)Compile and run
 ```
@@ -72,24 +74,24 @@ $ ./sudo altinor
 $ nc -l 192.168.100.6 65321
 ```
 
-## Send a packet containg the signature inside the payload
+## Send a packet containing the signature inside the payload
 ```
 $ nc 192.168.100.6 65321
 123-ExploitBytes0P-abcdEFGH
 ```
 
-## Observe the Altinor stdout on the console
+## Observe the Altinor output on the console
 ```
 $ sudo ./altinor  
 EXPLOIT! from IP 192.168.100.6 
 ```
 
 ## Scripting
-Congratulations, you have detected an exploit signature via the GPU!
-Use the output on the console with some scripting language and generate some reaction accordingly like generating XDP_DROP action for that specific IP address
+Congratulations, you have detected an exploit signature via the GPU!  
+From now on, use the output on the console with some scripting language and generate a reaction accordingly - like generating an XDP_DROP action for that specific IP address
 and apply it on the interface for a specific time duration.
 
 # Future
 Future versions will add in-line IPS functionality using DPDK.
 The author is also considering integrating the Altinor engine as an nginx module for HTTP inspection.
-Aside from GPUs, other parallel accelerators could be interesting and applicable for parallel pattern matching.
+Aside from GPUs, other parallel accelerators could be much more interesting and applicable for parallel pattern matching.
