@@ -7,7 +7,7 @@ This is the visual representation of the parallelised pattern search:
 ![Screenshot](https://github.com/vmetodiev/altinor/blob/master/pics/ALGO.JPG)<br />
 
 # Applications
-This repository contains an example that implements a network Instrusion Detection System (IDS), capable for inspecting TCP and/or UDP packets.
+This repository contains an example that implements a network Instrusion Detection System (IDS), capable of inspecting TCP and/or UDP packets.
 It works similarly to a packet sniffer, intercepting packets at OSI L2 via a Linux raw socket.
 
 Upon detecting the configured packet signature, Altinor will log a message on the stdout with the source IP address of the attacker. 
